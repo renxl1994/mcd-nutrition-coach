@@ -23,6 +23,7 @@ import sys
 from mcd_nutrition import (
     NUTRIENT_KEYS,
     NutritionIndex,
+    base_name,
     enable_utf8_stdout,
     format_number,
     protein_density,
@@ -71,36 +72,80 @@ def match_items(index, entries):
     return matched, unmatched
 
 
+# 不作为替换目标的餐品：
+# "把大杯可乐换成瓶装水，省 224 kcal" —— 这不是建议，是常识。
+# 换法的价值在于给出用户没想到的替换，而不是让他一眼就翻白眼的那种。
+TRIVIAL_SWAP_TARGETS = ("纯悦", "矿泉水", "纯净水")
+
+
+def _same_family(origin_name, candidate_name):
+    """
+    判断两个餐品是否同族（同一商品线的不同版本）。
+    "可乐" 与 "无糖可口可乐" 同族；"可乐" 与 "纯悦" 不同族。
+    同族替换更容易被真正采纳 —— 想喝可乐的人会接受无糖可乐，不会接受白开水。
+    """
+    a, b = base_name(origin_name), base_name(candidate_name)
+    if a in b or b in a:
+        return True
+    set_a, set_b = set(a), set(b)
+    if not set_a or not set_b:
+        return False
+    overlap = len(set_a & set_b)
+    return overlap >= max(1, min(len(set_a), len(set_b)) * 0.5)
+
+
 def suggest_swaps(index, matched):
     """
     给出「换一个更划算」的建议：
-    在同一分类里找 蛋白质不低于当前、热量更低 的餐品，按能省下的热量排序。
+    在同一分类里找「蛋白质不低于当前、热量更低」的餐品。
+
+    排序分三层，逐层决定：
+      1. 同族优先 —— 可乐换成无糖可乐，而不是换成白开水；
+      2. 综合评分 —— 省下的热量扣掉「加钠的代价」（每 50 mg 钠折算 1 kcal），
+         否则会给出"热量降了但钠涨了 500 mg"的建议，与本项目最想解决的钠问题自相矛盾；
+      3. 同分时热量更低的优先。
+    返回里带上 sodiumDelta，让上层如实展示这个取舍，而不是替用户藏起来。
     """
     suggestions = []
     for item, quantity in matched:
+        item_kcal = item.get("energyKcal")
+        item_sodium = item.get("sodium") or 0
+        if item_kcal is None:
+            continue
+
         better = []
         for candidate in index.by_category((item["category"],)):
-            if candidate is item or candidate.get("energyKcal") is None or item.get("energyKcal") is None:
+            if candidate is item or candidate.get("energyKcal") is None:
                 continue
-            protein_ok = (candidate.get("protein") or 0) >= (item.get("protein") or 0)
-            lighter = candidate["energyKcal"] < item["energyKcal"]
-            if protein_ok and lighter:
-                better.append(candidate)
+            if any(token in candidate["productName"] for token in TRIVIAL_SWAP_TARGETS):
+                continue
+            if (candidate.get("protein") or 0) < (item.get("protein") or 0):
+                continue
+            if candidate["energyKcal"] >= item_kcal:
+                continue
+
+            saved = item_kcal - candidate["energyKcal"]
+            sodium_delta = (candidate.get("sodium") or 0) - item_sodium
+            score = saved - max(0.0, sodium_delta) / 50.0
+            family_rank = 0 if _same_family(item["productName"], candidate["productName"]) else 1
+            better.append((family_rank, -score, candidate["energyKcal"], candidate, saved, sodium_delta))
+
         if not better:
             continue
-        better.sort(key=lambda c: c["energyKcal"])
-        best = better[0]
-        saved = (item["energyKcal"] - best["energyKcal"]) * quantity
+        better.sort(key=lambda entry: entry[:3])
+        _, _, _, best, saved_kcal, sodium_delta = better[0]
         suggestions.append(
             {
                 "from": item["productName"],
                 "to": best["productName"],
                 "quantity": quantity,
                 "category": item["category"],
-                "savedKcal": saved,
+                "savedKcal": saved_kcal * quantity,
+                "sodiumDelta": round(sodium_delta * quantity, 0),
                 "proteinDelta": round((best.get("protein") or 0) - (item.get("protein") or 0), 1),
             }
         )
+
     suggestions.sort(key=lambda s: s["savedKcal"], reverse=True)
     return suggestions[:3]
 
@@ -237,13 +282,16 @@ def main():
 
     if swaps:
         print()
-        print("可以这样换（不牺牲蛋白质、只减热量）：")
+        print("可以这样换（蛋白质不降低为前提，尽量少减热量、少加钠）：")
         for swap in swaps:
-            delta = "，蛋白质 %s%s g" % ("+" if swap["proteinDelta"] >= 0 else "", format_number(swap["proteinDelta"], 0))
-            print(
-                "    · %s → %s：省 %s kcal%s"
-                % (swap["from"], swap["to"], format_number(swap["savedKcal"], 0), delta)
-            )
+            protein_delta = swap["proteinDelta"]
+            sodium_delta = swap["sodiumDelta"]
+            parts = ["省 %s kcal" % format_number(swap["savedKcal"], 0)]
+            parts.append("蛋白质 %s%s g" % ("+" if protein_delta >= 0 else "-", format_number(abs(protein_delta), 0)))
+            if sodium_delta:
+                # 钠上涨的替换必须显式标出来，不能藏在"省了多少热量"后面
+                parts.append("钠 %s%s mg" % ("+" if sodium_delta > 0 else "-", format_number(abs(sodium_delta), 0)))
+            print("    · %s → %s：%s" % (swap["from"], swap["to"], "，".join(parts)))
 
     print()
     print("-" * 68)

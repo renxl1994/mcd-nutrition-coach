@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>麦门营养参谋 · 宣传图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1080px;
+    height: 1440px;
+    overflow: hidden;
+  }
+
+  body {
+    background: #0B0D12;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    color: #F5F6F8;
+    padding: 56px 76px 42px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- 顶部标签 ---------- */
+  .tag {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: #C9A227;
+    border: 1px solid rgba(201, 162, 39, 0.45);
+    border-radius: 999px;
+    padding: 10px 26px;
+  }
+
+  /* ---------- 主标题 ---------- */
+  .headline {
+    margin-top: 34px;
+    font-size: 72px;
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -1px;
+  }
+
+  .headline .num {
+    color: #FF6B57;
+    font-size: 86px;
+  }
+
+  .sub {
+    margin-top: 20px;
+    font-size: 31px;
+    color: #9AA1AE;
+    line-height: 1.5;
+  }
+
+  /* ---------- 明细卡 ---------- */
+  .card {
+    margin-top: 40px;
+    background: #14171F;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 26px;
+    padding: 32px 42px 26px;
+  }
+
+  .row {
+    display: flex;
+    align-items: baseline;
+    font-size: 31px;
+    padding: 10px 0;
+  }
+
+  .row .name { flex: 1; color: #E7E9EE; }
+  .row .kcal { color: #9AA1AE; font-size: 30px; }
+  .row .kcal b { color: #F5F6F8; font-size: 34px; font-weight: 600; }
+
+  .divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.12);
+    margin: 18px 0;
+  }
+
+  .row.total .name { font-weight: 600; }
+  .row.total .kcal b { color: #FF6B57; font-size: 42px; }
+
+  /* ---------- 对比条 ---------- */
+  .compare { margin-top: 36px; }
+
+  .cmp-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 26px;
+    color: #9AA1AE;
+    margin-bottom: 12px;
+  }
+
+  .cmp-label b { font-size: 38px; font-weight: 700; }
+
+  .bar {
+    height: 32px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+  }
+
+  .bar.before { width: 100%; background: #C0392B; }
+  .bar.after  { width: 53.7%; background: #2FA37A; }
+
+  /* ---------- 结论条 ---------- */
+  .verdict {
+    margin-top: 18px;
+    background: rgba(47, 163, 122, 0.13);
+    border-left: 6px solid #2FA37A;
+    border-radius: 0 16px 16px 0;
+    padding: 22px 32px;
+    font-size: 29px;
+    line-height: 1.5;
+    color: #D8F0E6;
+  }
+
+  .verdict b { color: #55D9A5; font-weight: 700; }
+
+  /* ---------- 底部 ---------- */
+  .spacer { flex: 1; }
+
+  .footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.11);
+    padding-top: 26px;
+  }
+
+  .brand {
+    font-size: 37px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .brand span { color: #C9A227; }
+
+  .meta {
+    margin-top: 10px;
+    font-size: 21px;
+    color: #7C8492;
+    line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+
+  <div class="tag">2026 麦当劳程序员创意开发大赛 · 参赛作品</div>
+
+  <div class="headline">
+    你点的这一单<br>
+    <span class="num">1116</span> 大卡
+  </div>
+
+  <div class="sub">
+    巨无霸 + 大薯条 + 大杯可乐<br>
+    点餐页不会告诉你这个数
+  </div>
+
+  <div class="card">
+    <div class="row"><span class="name">巨无霸</span><span class="kcal"><b>513</b> kcal</span></div>
+    <div class="row"><span class="name">大薯条</span><span class="kcal"><b>379</b> kcal</span></div>
+    <div class="row"><span class="name">可乐大杯</span><span class="kcal"><b>224</b> kcal</span></div>
+    <div class="divider"></div>
+    <div class="row total"><span class="name">合计</span><span class="kcal"><b>1116</b> kcal</span></div>
+  </div>
+
+  <div class="compare">
+    <div class="cmp-label"><span>原方案</span><b style="color:#FF6B57">1116 kcal</b></div>
+    <div class="bar before"></div>
+
+    <div class="cmp-label"><span>同样吃饱 · 换个点法</span><b style="color:#55D9A5">599 kcal</b></div>
+    <div class="bar after"></div>
+  </div>
+
+  <div class="verdict">
+    同样吃饱：热量 <b>-46%</b>，蛋白质 <b>33 → 37 g</b><br>
+    差的不是毅力，是信息
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="footer">
+    <div class="brand">麦门营养参谋 <span>·</span> MCD Nutrition Coach</div>
+    <div class="meta">
+      基于麦当劳中国官方 MCP · 160 项真实餐品营养数据 · 零第三方依赖<br>
+      非麦当劳官方产品，数据以麦当劳官方渠道当日信息为准，不构成医疗或营养建议
+    </div>
+  </div>
+
+</body>
+</html>

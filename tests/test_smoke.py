@@ -180,5 +180,59 @@ class TestOrderCheck(unittest.TestCase):
         self.assertGreater(protein_density(lean), protein_density(fatty))
 
 
+class TestSwapSuggestions(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.index = NutritionIndex()
+
+    @staticmethod
+    def synthetic(items):
+        """造一个只含目标数据的小索引，用来精确验证排序规则。"""
+        index = NutritionIndex.__new__(NutritionIndex)
+        index.meta = {}
+        index.items = []
+        for item in items:
+            item.setdefault("category", classify(item["productName"]))
+            item.setdefault("fat", 0)
+            item.setdefault("carbohydrate", 0)
+            item.setdefault("calcium", 0)
+            index.items.append(item)
+        return index
+
+    def test_swaps_never_lower_protein_and_report_sodium(self):
+        entries = order_check.parse_items("巨无霸*1,大薯条*1,可乐大杯*1")
+        matched, _ = order_check.match_items(self.index, entries)
+        swaps = order_check.suggest_swaps(self.index, matched)
+        self.assertTrue(swaps)
+        for swap in swaps:
+            self.assertGreater(swap["savedKcal"], 0, "换法必须真的省热量")
+            self.assertGreaterEqual(swap["proteinDelta"], 0, "换法不得降低蛋白质")
+            self.assertIn("sodiumDelta", swap, "钠的变化必须如实上报")
+
+    def test_sodium_increase_is_penalised(self):
+        """
+        候选 B 省得更多但把钠顶爆，候选 C 省得少一点而钠不涨。
+        钠代价足够大时，应该选 C —— 否则这个工具会给出
+        "热量降了、钠涨了 500 mg" 的建议，与项目自身发现的核心问题相冲突。
+        """
+        origin = {"productName": "原餐", "energyKcal": 300, "protein": 10, "sodium": 100}
+        greedy = {"productName": "省得多但钠爆", "energyKcal": 100, "protein": 10, "sodium": 5100}
+        balanced = {"productName": "均衡款", "energyKcal": 120, "protein": 10, "sodium": 100}
+        index = self.synthetic([origin, greedy, balanced])
+        swaps = order_check.suggest_swaps(index, [(origin, 1)])
+        self.assertEqual(len(swaps), 1)
+        self.assertEqual(swaps[0]["to"], "均衡款")
+
+    def test_sodium_penalty_does_not_block_clearly_better_choice(self):
+        """钠只涨一点点时，不该拦住一个省得很多的替换。"""
+        origin = {"productName": "原餐", "energyKcal": 300, "protein": 10, "sodium": 100}
+        slightly_salty = {"productName": "省很多的微钠款", "energyKcal": 50, "protein": 10, "sodium": 150}
+        meh = {"productName": "省得少的款", "energyKcal": 280, "protein": 10, "sodium": 100}
+        index = self.synthetic([origin, slightly_salty, meh])
+        swaps = order_check.suggest_swaps(index, [(origin, 1)])
+        self.assertEqual(swaps[0]["to"], "省很多的微钠款")
+        self.assertEqual(swaps[0]["sodiumDelta"], 50)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
