@@ -103,6 +103,8 @@ mcd-nutrition-coach/
 ├── MCP_INTEGRATION.md        # 用到的 MCP Tool、调用流程与业务价值
 ├── mcp-config.example.json   # 脱敏配置示例（只含环境变量占位符）
 ├── CONTEST_DECLARATION.md    # 参赛声明（官方原文，不可修改）
+├── workbuddy.md              # WorkBuddy 使用记录
+├── assets/                   # 宣传图（poster.png / poster.html）
 ├── data/
 │   ├── nutrition.json        # 结构化营养库（160 项，由 MCP 生成）
 │   └── raw/                  # MCP 原始返回，留档可复现

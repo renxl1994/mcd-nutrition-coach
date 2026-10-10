@@ -117,13 +117,49 @@ python scripts/meal_planner.py --slots main,side,drink --kcal-max 600 --exclude 
 
 ## 快速开始
 
-### 1. 申请麦当劳 MCP Token
+三种用法，由浅入深。**只想看看效果的话，第一种就够了。**
 
-前往 <https://open.mcd.cn/mcp>，手机号登录 → 右上角「控制台」→ 激活 → 复制 Token。
+### 方式一：直接跑起来（30 秒，不需要 Token）
 
-### 2. 配置 MCP
+环境要求：Python 3.8+，无第三方依赖。
 
-把 `mcp-config.example.json` 的内容加到你的 MCP 客户端配置里，把 `${MCD_MCP_TOKEN}` 换成你的 Token。
+```bash
+git clone https://github.com/【你的用户名】/mcd-nutrition-coach.git
+cd mcd-nutrition-coach
+python scripts/order_check.py --items "巨无霸*1,大薯条*1,可乐大杯*1"
+python scripts/meal_planner.py --slots main,side,drink --kcal-max 650 --protein-min 30
+python tests/test_smoke.py     # 19 项自测
+```
+
+营养库已经随仓库落盘（`data/nutrition.json`，160 项），
+**不联网、不申请 Token 也能跑**。上面两个核心能力到这一步就能用了。
+
+### 方式二：装成 Skill 交给 AI 用
+
+把整个目录复制到客户端的 skills 目录：
+
+| 客户端 | 放置路径 |
+|---|---|
+| WorkBuddy（用户级） | `~/.workbuddy/skills/mcd-nutrition-coach/` |
+| WorkBuddy（项目级） | `<项目>/.workbuddy/skills/mcd-nutrition-coach/` |
+| Claude Code | `~/.claude/skills/mcd-nutrition-coach/` |
+
+之后不用做任何额外配置——`SKILL.md` 开头的 `description` 会告诉 AI 什么时候该用它。
+文件里还定义了完整的对话工作流：什么时候该先问清楚预算、什么时候必须提示钠超标、
+下单前必须确认哪些信息。
+
+> `SKILL.md` 就是 YAML frontmatter + Markdown，格式是通用的。
+> 同一份文件换到别的支持 Agent Skills 的客户端也能用，不必绑定某一个客户端。
+
+### 方式三：接上麦当劳 MCP（要核对门店、真实价格、下单才需要）
+
+落盘的营养库是静态快照，只回答"吃下去会怎样"。要回答"这家店现在有没有、多少钱"，
+就得连上麦当劳官方 MCP。
+
+**1. 申请 Token** —— 前往 <https://open.mcd.cn/mcp>，手机号登录 → 右上角「控制台」→ 激活 → 复制 Token。
+
+**2. 配置 MCP** —— 把 `mcp-config.example.json` 的内容加到你的 MCP 客户端配置里，
+把 `${MCD_MCP_TOKEN}` 换成你自己的 Token。
 
 WorkBuddy 用户：左侧边栏【专家·技能·连接器】→【连接器】→ 右上角【自定义连接器】→【配置 MCP】，
 粘贴下面的 JSON 后保存并启用：
@@ -142,28 +178,12 @@ WorkBuddy 用户：左侧边栏【专家·技能·连接器】→【连接器】
 
 > ⚠️ Token 是凭证，不要提交到任何仓库。本项目仓库内**不含任何真实 Token**。
 
-### 3. 生成营养库
-
-环境要求：Python 3.8+，无第三方依赖。
+**3. 需要时刷新营养库**（菜单会变，建议动手前跑一次）：
 
 ```bash
 # 让 MCP 拉一次 list-nutrition-foods，把原始返回存到 data/raw/nutrition-raw.json
 python scripts/parse_nutrition.py data/raw/nutrition-raw.json -o data/nutrition.json
 ```
-
-> 仓库内已附带一份生成好的 `data/nutrition.json`（160 项），
-> 不重新生成也能直接跑——这也是把数据落盘的好处之一：**离线可用**。
-
-### 4. 开始用
-
-```bash
-python scripts/order_check.py --items "巨无霸*1,中薯条*1,可乐中杯*1"
-python scripts/meal_planner.py --slots main,side,drink --kcal-max 650 --protein-min 30
-python tests/test_smoke.py     # 19 项自测
-```
-
-作为 WorkBuddy Skill 使用时，`SKILL.md` 里定义了完整的对话工作流——
-包括什么时候该先问清楚预算、什么时候必须提示钠超标、下单前必须确认哪些信息。
 
 ---
 
@@ -187,6 +207,11 @@ mcd-nutrition-coach/
 ├── MCP_INTEGRATION.md        # 用到的 MCP Tool、调用流程与业务价值
 ├── mcp-config.example.json   # 脱敏配置示例（只含环境变量占位符）
 ├── CONTEST_DECLARATION.md    # 参赛声明（官方原文，不可修改）
+├── workbuddy.md              # WorkBuddy 使用记录（含开发中修掉的真实缺陷）
+├── LICENSE                   # MIT
+├── assets/
+│   ├── poster.png            # 宣传图（1080×1440）
+│   └── poster.html           # 宣传图源文件，改完文案可重新渲染
 ├── data/
 │   ├── nutrition.json        # 结构化营养库（160 项）
 │   └── raw/                  # MCP 原始返回，用于复现
