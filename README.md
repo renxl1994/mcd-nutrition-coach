@@ -168,7 +168,7 @@ WorkBuddy 用户：左侧边栏【专家·技能·连接器】→【连接器】
 {
   "mcpServers": {
     "mcd-mcp": {
-      "type": "streamablehttp",
+      "type": "streamableHttp",
       "url": "https://mcp.mcd.cn",
       "headers": { "Authorization": "Bearer 你的Token" }
     }
