@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>麦门营养参谋 · 点麦当劳之前，先把账算清楚</title>
+<meta name="description" content="基于麦当劳中国官方 MCP 的下单前营养参谋。把这一餐的热量、蛋白质和钠算清楚，并给出不牺牲蛋白质的替换建议。零第三方依赖。">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0B0D12;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", -apple-system, sans-serif;
+    color: #F5F6F8;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 780px; margin: 0 auto; padding: 56px 28px 72px; }
+
+  .tag {
+    display: inline-block;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    color: #C9A227;
+    border: 1px solid rgba(201, 162, 39, 0.45);
+    border-radius: 999px;
+    padding: 6px 16px;
+  }
+
+  h1 {
+    margin-top: 26px;
+    font-size: 46px;
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -0.5px;
+  }
+  h1 .num { color: #FF6B57; }
+
+  .sub { margin-top: 14px; font-size: 18px; color: #9AA1AE; }
+
+  h2 {
+    margin-top: 56px;
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  p { margin-top: 14px; font-size: 16px; color: #C3C7D0; }
+  p b { color: #F5F6F8; }
+  a { color: #55D9A5; text-decoration: none; border-bottom: 1px solid rgba(85, 217, 165, 0.35); }
+  a:hover { border-bottom-color: #55D9A5; }
+
+  .card {
+    margin-top: 30px;
+    background: #14171F;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 18px;
+    padding: 22px 26px 18px;
+  }
+
+  .row { display: flex; align-items: baseline; font-size: 18px; padding: 7px 0; }
+  .row .name { flex: 1; color: #E7E9EE; }
+  .row .kcal { color: #9AA1AE; font-size: 15px; }
+  .row .kcal b { color: #F5F6F8; font-size: 19px; font-weight: 600; }
+
+  .divider { height: 1px; background: rgba(255, 255, 255, 0.12); margin: 12px 0; }
+  .row.total .name { font-weight: 600; }
+  .row.total .kcal b { color: #FF6B57; font-size: 24px; }
+
+  .note { margin-top: 12px; font-size: 14px; color: #7C8492; }
+
+  .stat {
+    margin-top: 22px;
+    background: rgba(255, 107, 87, 0.1);
+    border-left: 4px solid #FF6B57;
+    border-radius: 0 12px 12px 0;
+    padding: 18px 22px;
+  }
+  .stat .big { font-size: 34px; font-weight: 700; color: #FF6B57; line-height: 1.2; }
+  .stat .txt { margin-top: 6px; font-size: 15px; color: #E0C8C3; }
+
+  .verdict {
+    margin-top: 22px;
+    background: rgba(47, 163, 122, 0.13);
+    border-left: 4px solid #2FA37A;
+    border-radius: 0 12px 12px 0;
+    padding: 18px 22px;
+    font-size: 16px;
+    color: #D8F0E6;
+  }
+  .verdict b { color: #55D9A5; }
+
+  .btns { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .btn.primary { background: #2FA37A; color: #06231A; border-bottom: none; }
+  .btn.primary:hover { background: #55D9A5; }
+  .btn.ghost { border: 1px solid rgba(255, 255, 255, 0.22); color: #F5F6F8; border-bottom: 1px solid rgba(255, 255, 255, 0.22); }
+  .btn.ghost:hover { border-color: rgba(255, 255, 255, 0.45); }
+
+  pre {
+    margin-top: 16px;
+    background: #14171F;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #C3C7D0;
+  }
+  pre .c { color: #6E7681; }
+  pre .k { color: #55D9A5; }
+
+  ol.paths { margin-top: 16px; padding-left: 0; list-style: none; }
+  ol.paths li {
+    margin-top: 18px;
+    padding-left: 34px;
+    position: relative;
+    font-size: 16px;
+    color: #C3C7D0;
+  }
+  ol.paths li::before {
+    content: attr(data-n);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    border-radius: 50%;
+    background: rgba(47, 163, 122, 0.18);
+    color: #55D9A5;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  ol.paths li b { color: #F5F6F8; }
+
+  footer {
+    margin-top: 64px;
+    border-top: 1px solid rgba(255, 255, 255, 0.11);
+    padding-top: 24px;
+  }
+  .brand { font-size: 19px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand span { color: #C9A227; }
+  .meta { margin-top: 10px; font-size: 13px; color: #7C8492; line-height: 1.7; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 34px; }
+    h2 { font-size: 21px; }
+    .wrap { padding: 40px 20px 56px; }
+    .row { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="tag">2026 麦当劳程序员创意开发大赛 · 参赛作品</div>
+
+  <h1>你点的这一单<br><span class="num">1116</span> 大卡</h1>
+
+  <p class="sub">
+    巨无霸 + 大薯条 + 大杯可乐<br>
+    这个数字，点餐页不会告诉你。
+  </p>
+
+  <div class="card">
+    <div class="row"><span class="name">巨无霸</span><span class="kcal"><b>513</b> kcal</span></div>
+    <div class="row"><span class="name">大薯条</span><span class="kcal"><b>379</b> kcal</span></div>
+    <div class="row"><span class="name">可乐大杯</span><span class="kcal"><b>224</b> kcal</span></div>
+    <div class="divider"></div>
+    <div class="row total"><span class="name">合计</span><span class="kcal"><b>1116</b> kcal</span></div>
+    <div class="note">蛋白质 33 g · 钠 1177 mg</div>
+  </div>
+
+  <div class="btns">
+    <a class="btn primary" href="https://github.com/renxl1994/mcd-nutrition-coach">在 GitHub 上看源码</a>
+    <a class="btn ghost" href="#start">30 秒跑一次</a>
+  </div>
+
+  <h2>35 个接口，只有 1 个在回答「吃下去会怎样」</h2>
+
+  <p>
+    麦当劳开放了 35 个 MCP 接口。其中 <b>34 个在回答「怎么把东西卖给你」</b>——
+    下单、领券、算积分、查门店。只有
+    <code>list-nutrition-foods</code> 这一个，回答的是
+    <b>「吃下去会怎样」</b>。
+  </p>
+
+  <p>
+    这个项目只用那一个。它不劝你吃，也不劝你不吃——只是把账算清楚，然后你自己决定。
+  </p>
+
+  <h2>跑完上百组搭配，最普遍的问题不是热量，是钠</h2>
+
+  <div class="stat">
+    <div class="big">961 mg</div>
+    <div class="txt">
+      一个巨无霸的钠含量，相当于《中国居民膳食指南》每日建议上限（2000 mg）的 <b>48%</b>。
+      一个汉堡就吃掉近一半。
+    </div>
+  </div>
+
+  <div class="stat" style="border-left-color:#C9A227; background:rgba(201,162,39,0.1);">
+    <div class="big" style="color:#C9A227;">59%</div>
+    <div class="txt" style="color:#E4DCC2;">
+      巨无霸 + 大薯条 + 大杯可乐合计 1177 mg 钠，一顿吃掉全天建议量的 59%。
+      而同一份套餐的钠，比它的热量更难在点餐页上看到。
+    </div>
+  </div>
+
+  <p>
+    所以这个 Skill 有一条硬性规则：<b>每餐钠超过 800 mg 必须主动提示</b>——
+    不是等用户问，而是主动说。
+  </p>
+
+  <h2 id="start">30 秒跑一次，不用申请任何凭证</h2>
+
+  <p>
+    营养库（160 项真实餐品）已经随仓库落盘，<b>不联网、不装包、不需要 Token</b>
+    就能跑。只需要 Python 3.8+。
+  </p>
+
+  <pre><span class="c">$</span> <span class="k">git clone</span> https://github.com/renxl1994/mcd-nutrition-coach.git
+<span class="c">$</span> <span class="k">cd</span> mcd-nutrition-coach
+<span class="c">$</span> <span class="k">python</span> scripts/order_check.py --items "巨无霸*1,大薯条*1,可乐大杯*1"</pre>
+
+  <ol class="paths">
+    <li data-n="1"><b>只是想看看效果</b> —— 上面三条命令就够了，零第三方依赖。</li>
+    <li data-n="2"><b>想当 Skill 用</b> —— 把整个文件夹放进 <code>.workbuddy/skills/</code>（或 <code>~/.claude/skills/</code>），
+        AI 会自己读 <code>SKILL.md</code> 并自动触发，不用记任何命令。</li>
+    <li data-n="3"><b>想核对门店在售、真实价格并下单</b> —— 再去
+        <a href="https://open.mcd.cn/mcp">open.mcd.cn/mcp</a> 申请一个免费 Token，配进 MCP 即可。</li>
+  </ol>
+
+  <h2>它给出的建议，会自己标出代价</h2>
+
+  <p>
+    换法建议不是「省了多少热量」就完事。它给「把份量改小」和「钠变高」都标了价，
+    排序时一起权衡——否则很容易给出「热量降了但钠涨了 200 mg」这种自相矛盾的建议。
+  </p>
+
+  <p>
+    换成双层吉士汉堡 + 麦乐鸡 4 块 + 无糖可口可乐大杯：
+    <b>热量 1116 → 599 kcal（-46%），蛋白质 33 → 37 g（还多 4 克）</b>，
+    代价是钠 <b>1177 → 1407 mg</b>。工具会把这个代价一并打在建议后面，而不是替你藏起来。
+  </p>
+
+  <div class="verdict">
+    差的不是毅力，是信息。
+  </div>
+
+  <footer>
+    <div class="brand">麦门营养参谋 <span>·</span> MCD Nutrition Coach</div>
+    <div class="meta">
+      基于麦当劳中国官方 MCP 提供的公开营养数据构建 · 160 项真实餐品 · 22 项零依赖自测<br>
+      本项目为「2026 麦当劳程序员创意开发大赛」参赛作品，由参赛者独立开发，
+      <b>非麦当劳官方产品</b>。<br>
+      页面数据不构成医疗或营养建议；餐品是否在售、实际价格与营养值以麦当劳官方渠道当日信息为准。
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
