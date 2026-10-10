@@ -27,6 +27,7 @@ from mcd_nutrition import (
     enable_utf8_stdout,
     format_number,
     protein_density,
+    size_rank,
 )
 
 # 单餐默认参考线（可被命令行覆盖）
@@ -77,6 +78,13 @@ def match_items(index, entries):
 # 换法的价值在于给出用户没想到的替换，而不是让他一眼就翻白眼的那种。
 TRIVIAL_SWAP_TARGETS = ("纯悦", "矿泉水", "纯净水")
 
+# 把规格改小要付的价格（kcal 当量）。
+# 大杯无糖可乐、中杯无糖可乐、小杯无糖可乐都是 0 kcal，三者省下的热量一模一样；
+# 如果只按"加钠的代价"排序，就会推荐把大杯换成小杯 —— 用户白白少喝三分之二，
+# 换来的只是少 28 mg 钠。份量是用户自己选的，缩小它不该算成这个换法的功劳，
+# 所以给它标个价：只比"加 250 mg 钠"的代价略高一点点，够用来打破规格上的平局。
+DOWNSIZE_PRICE = 5.0
+
 
 def _same_family(origin_name, candidate_name):
     """
@@ -101,8 +109,9 @@ def suggest_swaps(index, matched):
 
     排序分三层，逐层决定：
       1. 同族优先 —— 可乐换成无糖可乐，而不是换成白开水；
-      2. 综合评分 —— 省下的热量扣掉「加钠的代价」（每 50 mg 钠折算 1 kcal），
-         否则会给出"热量降了但钠涨了 500 mg"的建议，与本项目最想解决的钠问题自相矛盾；
+      2. 综合评分 —— 省下的热量，扣掉「加钠的代价」（每 50 mg 钠折算 1 kcal）
+         与「把份量改小的代价」（DOWNSIZE_PRICE）。前者避免"热量降了但钠涨了
+         500 mg"的建议，后者避免"大杯可乐换小杯无糖可乐"这种白少喝的换法；
       3. 同分时热量更低的优先。
     返回里带上 sodiumDelta，让上层如实展示这个取舍，而不是替用户藏起来。
     """
@@ -110,6 +119,7 @@ def suggest_swaps(index, matched):
     for item, quantity in matched:
         item_kcal = item.get("energyKcal")
         item_sodium = item.get("sodium") or 0
+        item_size = size_rank(item["productName"])
         if item_kcal is None:
             continue
 
@@ -126,7 +136,11 @@ def suggest_swaps(index, matched):
 
             saved = item_kcal - candidate["energyKcal"]
             sodium_delta = (candidate.get("sodium") or 0) - item_sodium
-            score = saved - max(0.0, sodium_delta) / 50.0
+            candidate_size = size_rank(candidate["productName"])
+            downsized = (
+                item_size is not None and candidate_size is not None and candidate_size < item_size
+            )
+            score = saved - max(0.0, sodium_delta) / 50.0 - (DOWNSIZE_PRICE if downsized else 0.0)
             family_rank = 0 if _same_family(item["productName"], candidate["productName"]) else 1
             better.append((family_rank, -score, candidate["energyKcal"], candidate, saved, sodium_delta))
 

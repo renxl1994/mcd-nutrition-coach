@@ -24,6 +24,7 @@ from mcd_nutrition import (  # noqa: E402
     base_name,
     classify,
     protein_density,
+    size_rank,
 )
 from parse_nutrition import parse_rows  # noqa: E402
 import meal_planner  # noqa: E402
@@ -112,6 +113,19 @@ class TestMatching(unittest.TestCase):
     def test_base_name_normalises_specs(self):
         self.assertEqual(base_name("冰美式小杯"), base_name("热美式中杯"))
         self.assertEqual(base_name("大薯条"), base_name("小薯条"))
+
+    def test_size_rank_recognises_specs(self):
+        self.assertEqual(size_rank("可乐大杯"), 3)
+        self.assertEqual(size_rank("无糖可口可乐小杯"), 1)
+        self.assertEqual(size_rank("大薯条"), 3)
+        self.assertEqual(size_rank("迷你朱古力新地"), 0)
+        self.assertGreater(size_rank("大杯玉米杯"), size_rank("小杯玉米杯"))
+
+    def test_size_rank_ignores_false_prefix(self):
+        # 「大脆鸡扒麦满分」以"大"开头，但不是规格；当成规格会凭空多出一个档位
+        self.assertIsNone(size_rank("大脆鸡扒麦满分"))
+        self.assertIsNone(size_rank("巨无霸"))
+        self.assertIsNone(size_rank("麦乐鸡4块"))
 
 
 class TestPlanner(unittest.TestCase):
@@ -232,6 +246,19 @@ class TestSwapSuggestions(unittest.TestCase):
         swaps = order_check.suggest_swaps(index, [(origin, 1)])
         self.assertEqual(swaps[0]["to"], "省很多的微钠款")
         self.assertEqual(swaps[0]["sodiumDelta"], 50)
+
+    def test_swap_does_not_shrink_the_size_user_ordered(self):
+        """
+        回归：无糖可乐的大/中/小杯都是 0 kcal，三者省下的热量完全相同。
+        若只按"加钠的代价"排序，小杯（钠 25 mg）会排到第一 —— 等于建议用户
+        白白少喝三分之二杯、只为少 28 mg 钠。同热量收益下必须优先保住份量。
+        """
+        entries = order_check.parse_items("可乐大杯*1")
+        matched, _ = order_check.match_items(self.index, entries)
+        swaps = order_check.suggest_swaps(self.index, matched)
+        self.assertTrue(swaps)
+        self.assertEqual(swaps[0]["to"], "无糖可口可乐大杯")
+        self.assertEqual(swaps[0]["savedKcal"], 224)
 
 
 if __name__ == "__main__":

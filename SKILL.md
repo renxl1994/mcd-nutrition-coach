@@ -120,7 +120,7 @@ mcd-nutrition-coach/
 │   ├── meal_planner.py       # 预算配餐
 │   └── order_check.py        # 下单前体检
 └── tests/
-    └── test_smoke.py         # 零依赖自测（19 项）
+    └── test_smoke.py         # 零依赖自测（22 项）
 ```
 
 ## 维护提示

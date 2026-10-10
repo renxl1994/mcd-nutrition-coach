@@ -228,6 +228,38 @@ def base_name(product_name):
     return name.strip() or product_name
 
 
+# 规格档位。用于判断一次替换有没有把用户点的份量改小 —— 份量本身有价值，
+# 缩小份量带来的热量下降不该被算成"这个换法省了好多"。
+_SIZE_TOKENS = (("超大杯", 4), ("大杯", 3), ("中杯", 2), ("小杯", 1), ("迷你", 0))
+_SIZE_PREFIXES = (("超大", 4), ("大", 3), ("中", 2), ("小", 1))
+# 只对短名称启用前缀规则。否则"大脆鸡扒麦满分"这种以"大"开头的商品名
+# 会被当成"大杯"规格，凭空多出一个不存在的档位。
+_SIZE_PREFIX_MAX_LEN = 4
+
+
+def size_rank(product_name):
+    """
+    取名称里的规格档位：0 迷你 / 1 小 / 2 中 / 3 大 / 4 超大；识别不出返回 None。
+
+        >>> size_rank("可乐大杯")
+        3
+        >>> size_rank("无糖可口可乐小杯")
+        1
+        >>> size_rank("大薯条")
+        3
+        >>> size_rank("大脆鸡扒麦满分") is None
+        True
+    """
+    for token, rank in _SIZE_TOKENS:
+        if token in product_name:
+            return rank
+    if len(product_name) <= _SIZE_PREFIX_MAX_LEN:
+        for prefix, rank in _SIZE_PREFIXES:
+            if product_name.startswith(prefix):
+                return rank
+    return None
+
+
 def format_number(value, digits=1):
     if value is None:
         return "?"

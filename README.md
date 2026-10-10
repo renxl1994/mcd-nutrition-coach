@@ -14,7 +14,7 @@
 
 - **零第三方依赖** —— 只要 Python 标准库，不用装任何东西
 - **160 项真实营养数据** —— 直接来自麦当劳中国官方 MCP，附原始返回可复现
-- **19 项自测** —— 列对齐、口语别名、规格去重、约束求解都有回归测试看着
+- **22 项自测** —— 列对齐、口语别名、规格去重、换法规则、约束求解都有回归测试看着
 
 > 本项目是「2026 麦当劳程序员创意开发大赛」参赛作品，由参赛者独立开发，非麦当劳官方产品。
 
@@ -47,7 +47,7 @@ $ python scripts/order_check.py --items "巨无霸*1,大薯条*1,可乐大杯*1"
 ⛔ 钠超标 377 mg（1177 / 上限 800）
 
 可以这样换（蛋白质不降低为前提，尽量少减热量、少加钠）：
-    · 可乐大杯 → 无糖可口可乐小杯：省 224 kcal，蛋白质 +0 g，钠 +25 mg
+    · 可乐大杯 → 无糖可口可乐大杯：省 224 kcal，蛋白质 +0 g，钠 +53 mg
     · 大薯条 → 麦乐鸡4块：省 209 kcal，蛋白质 +4 g，钠 +121 mg
     · 巨无霸 → 双层吉士汉堡：省 84 kcal，蛋白质 +0 g，钠 +56 mg
 ```
@@ -128,7 +128,7 @@ git clone https://github.com/【你的用户名】/mcd-nutrition-coach.git
 cd mcd-nutrition-coach
 python scripts/order_check.py --items "巨无霸*1,大薯条*1,可乐大杯*1"
 python scripts/meal_planner.py --slots main,side,drink --kcal-max 650 --protein-min 30
-python tests/test_smoke.py     # 19 项自测
+python tests/test_smoke.py     # 22 项自测
 ```
 
 营养库已经随仓库落盘（`data/nutrition.json`，160 项），
@@ -221,7 +221,7 @@ mcd-nutrition-coach/
 │   ├── meal_planner.py       # 预算配餐
 │   └── order_check.py        # 下单前体检
 └── tests/
-    └── test_smoke.py         # 零依赖自测（19 项）
+    └── test_smoke.py         # 零依赖自测（22 项）
 ```
 
 ---
@@ -233,7 +233,7 @@ mcd-nutrition-coach/
 1. 营养数据是静态的，一天拉一次足够，没必要每轮重打接口、白占限流额度；
 2. 让大模型每次把 9 列 × 160 行的压缩文本重新对齐解析，是稳定的错行来源
    ——我们宁可解析一次、落成 JSON，也不接受"偶尔多算 300 kcal"；
-3. 本地化之后可以离线跑、可以写单测。项目里 19 项自测全部覆盖解析对齐、
+3. 本地化之后可以离线跑、可以写单测。项目里 22 项自测全部覆盖解析对齐、
    别名映射、规格去重、约束求解、判定逻辑，就是这么来的。
 
 **为什么坚持"不劝食也不劝不食"？**
